@@ -4,8 +4,6 @@ pipeline {
   environment {
     IMAGE_NAME = "orincore-flask-app"
     CONTAINER_NAME = "orincore-flask"
-    CONTAINER_PORT = "5000"
-    HOST_PORT = "5000"
   }
 
   stages {
@@ -18,7 +16,7 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          sh "sudo docker build -t ${IMAGE_NAME} ."
+          sh "docker build -t ${IMAGE_NAME} ."
         }
       }
     }
@@ -26,12 +24,8 @@ pipeline {
     stage('Stop and Remove Existing Container') {
       steps {
         script {
-          sh """
-            if sudo docker ps -a --format '{{.Names}}' | grep -Eq '^${CONTAINER_NAME}\$'; then
-              sudo docker stop ${CONTAINER_NAME}
-              sudo docker rm ${CONTAINER_NAME}
-            fi
-          """
+          sh "docker stop ${CONTAINER_NAME} || true"
+          sh "docker rm ${CONTAINER_NAME} || true"
         }
       }
     }
@@ -39,22 +33,19 @@ pipeline {
     stage('Run New Container') {
       steps {
         script {
-          sh "sudo docker run -d -p ${HOST_PORT}:${CONTAINER_PORT} --name ${CONTAINER_NAME} ${IMAGE_NAME}"
+          sh "docker run -d -p 5000:5000 --name ${CONTAINER_NAME} ${IMAGE_NAME}"
         }
       }
     }
   }
 
   post {
-    always {
-      echo 'Cleaning up workspace...'
+    failure {
+      echo "Deployment failed!"
       cleanWs()
     }
-    failure {
-      echo 'Deployment failed!'
-    }
     success {
-      echo "Application deployed successfully on port ${HOST_PORT}"
+      echo "Deployment successful!"
     }
   }
 }
